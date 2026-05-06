@@ -1,0 +1,63 @@
+name: Build Windows & macOS Installers
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Windows release
+        run: flutter build windows --release
+
+      - name: Zip Windows build
+        run: |
+          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath neoden_yy1_formatter_windows.zip
+        shell: powershell
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: neoden_yy1_formatter_windows
+          path: neoden_yy1_formatter_windows.zip
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build macOS release
+        run: flutter build macos --release
+
+      - name: Zip macOS build
+        run: |
+          cd build/macos/Build/Products/Release
+          zip -r "$GITHUB_WORKSPACE/neoden_yy1_formatter_macos.zip" neoden_yy1_formatter.app
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: neoden_yy1_formatter_macos
+          path: neoden_yy1_formatter_macos.zip
