@@ -1,4 +1,4 @@
-name: Build Windows & macOS Installers
+name: Build Windows, macOS & Linux Packages
 
 on:
   push:
@@ -61,3 +61,39 @@ jobs:
         with:
           name: neoden_yy1_formatter_macos
           path: neoden_yy1_formatter_macos.zip
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Linux desktop build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Build Linux release
+        run: flutter build linux --release
+
+      - name: Zip Linux bundle
+        run: |
+          cd build/linux/x64/release/bundle
+          zip -r "$GITHUB_WORKSPACE/neoden_yy1_formatter_linux.zip" .
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: neoden_yy1_formatter_linux
+          path: neoden_yy1_formatter_linux.zip

@@ -5,6 +5,7 @@ import 'package:neoden_yy1_formatter/features/providers.dart';
 import 'package:neoden_yy1_formatter/features/assignment/placement_assignment_screen.dart';
 import 'package:neoden_yy1_formatter/core/models/resolved_schema.dart';
 import 'package:neoden_yy1_formatter/core/normalize/normalization_service.dart';
+import 'package:neoden_yy1_formatter/features/home/home_navigation_button.dart';
 
 class SchemaReviewScreen extends ConsumerStatefulWidget {
   const SchemaReviewScreen({super.key});
@@ -68,9 +69,12 @@ class _SchemaReviewScreenState extends ConsumerState<SchemaReviewScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Confirm Column Mapping',
-            style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text(
+          'Confirm Column Mapping',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
         actions: [
+          const HomeNavigationButton(),
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: FilledButton.icon(
@@ -92,10 +96,9 @@ class _SchemaReviewScreenState extends ConsumerState<SchemaReviewScreen> {
                 Text(
                   'We detected the following column mapping. '
                   'Please verify and correct any mistakes before continuing.',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: colors.onSurfaceVariant),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 ...CanonicalField.values.map((field) {
@@ -120,10 +123,7 @@ class _SchemaReviewScreenState extends ConsumerState<SchemaReviewScreen> {
           VerticalDivider(width: 1, color: colors.outlineVariant),
 
           // ── Diagnostics panel ───────────────────────────────────────────
-          Expanded(
-            flex: 2,
-            child: _DiagnosticsPanel(match: match),
-          ),
+          Expanded(flex: 2, child: _DiagnosticsPanel(match: match)),
         ],
       ),
     );
@@ -153,8 +153,8 @@ class _MappingRow extends StatelessWidget {
     final indicatorColor = !isResolved
         ? (field.isRequired ? colors.error : colors.onSurfaceVariant)
         : confidence >= 0.70
-            ? Colors.green
-            : Colors.orange;
+        ? Colors.green
+        : Colors.orange;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -164,7 +164,9 @@ class _MappingRow extends StatelessWidget {
             width: 10,
             height: 10,
             decoration: BoxDecoration(
-                color: indicatorColor, shape: BoxShape.circle),
+              color: indicatorColor,
+              shape: BoxShape.circle,
+            ),
           ),
           const SizedBox(width: 10),
           SizedBox(
@@ -174,16 +176,15 @@ class _MappingRow extends StatelessWidget {
               children: [
                 Text(
                   field.label,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(fontWeight: FontWeight.w600),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 Text(
                   field.isRequired ? 'required' : 'optional',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
+                    color: colors.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -196,10 +197,13 @@ class _MappingRow extends StatelessWidget {
               onChanged: onChanged,
               decoration: InputDecoration(
                 isDense: true,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
           ),
@@ -210,9 +214,9 @@ class _MappingRow extends StatelessWidget {
               isResolved ? '$pct%' : '—',
               textAlign: TextAlign.right,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: indicatorColor,
-                    fontWeight: FontWeight.w600,
-                  ),
+                color: indicatorColor,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -233,11 +237,12 @@ class _DiagnosticsPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Inference Diagnostics',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w700)),
+          Text(
+            'Inference Diagnostics',
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
           const SizedBox(height: 12),
           Expanded(
             child: ListView.separated(
@@ -248,11 +253,11 @@ class _DiagnosticsPanel extends StatelessWidget {
                 child: Text(
                   match.diagnostics[i],
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: match.diagnostics[i].contains('NOT FOUND')
-                            ? colors.error
-                            : colors.onSurface,
-                        fontFamily: 'monospace',
-                      ),
+                    color: match.diagnostics[i].contains('NOT FOUND')
+                        ? colors.error
+                        : colors.onSurface,
+                    fontFamily: 'monospace',
+                  ),
                 ),
               ),
             ),

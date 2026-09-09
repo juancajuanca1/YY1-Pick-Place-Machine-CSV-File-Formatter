@@ -1,4 +1,5 @@
 import '../models/tabular_document.dart';
+import '../models/board_side.dart';
 
 /// Converts raw file text into a TabularDocument.
 /// Handles comma, tab, and semicolon delimiters, comment lines, and BOM.
@@ -31,23 +32,35 @@ class FileIngestor {
       );
     }
 
-    // Find the header row: prefer the first line containing "designator"
-    // (case-insensitive). Falls back to the very first non-comment line.
+    // Find an explicit header. YY1 files can have a metadata preamble, while
+    // Fusion 360/EAGLE may export six-column placement data with no header.
     String headerRaw = nonCommentLines.first;
+    var foundExplicitHeader = false;
     for (final line in nonCommentLines) {
-      if (line.toLowerCase().contains('designator')) {
+      if (_looksLikeHeader(line)) {
         headerRaw = line;
+        foundExplicitHeader = true;
         break;
       }
     }
-    final delimiter = _detectDelimiter(headerRaw);
+    final delimiter = _detectDelimiter(
+      foundExplicitHeader ? headerRaw : nonCommentLines.first,
+    );
 
-    final originalHeaders = _splitLine(headerRaw, delimiter);
+    final firstCells = _splitLine(nonCommentLines.first, delimiter);
+    final isHeaderlessPlacement =
+        !foundExplicitHeader && _looksLikePlacementRow(firstCells);
+
+    final originalHeaders = isHeaderlessPlacement
+        ? _syntheticHeaders(firstCells.length)
+        : _splitLine(headerRaw, delimiter);
     final headers = originalHeaders.map((h) => h.toLowerCase().trim()).toList();
 
     // Find the raw-line index of the header so we only take rows below it
-    int headerRawIndex = rawLines.indexWhere((l) => l == headerRaw);
-    if (headerRawIndex < 0) headerRawIndex = 0;
+    int headerRawIndex = isHeaderlessPlacement
+        ? rawLines.indexWhere((l) => l == nonCommentLines.first) - 1
+        : rawLines.indexWhere((l) => l == headerRaw);
+    if (headerRawIndex < 0 && !isHeaderlessPlacement) headerRawIndex = 0;
 
     // Build rows from lines strictly after the header
     final rows = <TabularRow>[];
@@ -66,7 +79,63 @@ class FileIngestor {
       rows: rows,
       delimiter: delimiter,
       rawLines: rawLines,
+      inferredSide: _inferSideFromFileName(fileName),
+      hasSyntheticHeaders: isHeaderlessPlacement,
     );
+  }
+
+  static bool _looksLikeHeader(String line) {
+    final lower = line.toLowerCase();
+    const terms = [
+      'designator',
+      'reference',
+      'refdes',
+      'mid x',
+      'posx',
+      'center x',
+      'rotation',
+      'orientation',
+      'footprint',
+      'package',
+    ];
+    return terms.where(lower.contains).length >= 2 ||
+        lower.contains('designator');
+  }
+
+  static bool _looksLikePlacementRow(List<String> cells) {
+    if (cells.length < 4) return false;
+    final designator = RegExp(r'^[A-Za-z]{1,6}\d+[A-Za-z]?$');
+    return designator.hasMatch(cells[0].trim()) &&
+        double.tryParse(cells[1].trim()) != null &&
+        double.tryParse(cells[2].trim()) != null &&
+        double.tryParse(cells[3].trim()) != null;
+  }
+
+  static List<String> _syntheticHeaders(int count) {
+    const fusionOrder = [
+      'Designator',
+      'X',
+      'Y',
+      'Rotation',
+      'Value',
+      'Footprint',
+    ];
+    return List.generate(
+      count,
+      (i) => i < fusionOrder.length ? fusionOrder[i] : 'Column ${i + 1}',
+    );
+  }
+
+  static BoardSide _inferSideFromFileName(String fileName) {
+    final stem = fileName.toLowerCase().replaceAll(RegExp(r'\.[^.]+$'), '');
+    final tokens = stem.split(RegExp(r'[^a-z0-9]+')).toSet();
+    if (tokens.any({'bottom', 'back', 'rear', 'bot', 'b'}.contains)) {
+      return BoardSide.bottom;
+    }
+    if (tokens.any({'top', 'front', 'component', 't'}.contains)) {
+      return BoardSide.top;
+    }
+    return BoardSide.unknown;
   }
 
   static String _detectDelimiter(String line) {

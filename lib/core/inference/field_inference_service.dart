@@ -1,42 +1,106 @@
 import '../models/tabular_document.dart';
 import '../models/resolved_schema.dart';
+
 import 'dart:math' as math;
 
 /// Aliases for each canonical field – used for header-name scoring.
 const _aliases = <CanonicalField, List<String>>{
   CanonicalField.designator: [
-    'designator', 'ref', 'reference', 'refdes', 'ref des', 'component',
-    'part ref', 'reference designator', 'cmp',
+    'designator',
+    'ref',
+    'reference',
+    'refdes',
+    'ref des',
+    'component',
+    'part ref',
+    'reference designator',
+    'cmp',
   ],
   CanonicalField.x: [
-    'x', 'mid x', 'x(mm)', 'mid x(mm)', 'posx', 'center x', 'x_mm', 'mid_x',
-    'pos x', 'x coordinate', 'x-pos',
+    'x',
+    'mid x',
+    'x(mm)',
+    'mid x(mm)',
+    'posx',
+    'center x',
+    'x_mm',
+    'mid_x',
+    'pos x',
+    'x coordinate',
+    'x-pos',
   ],
   CanonicalField.y: [
-    'y', 'mid y', 'y(mm)', 'mid y(mm)', 'posy', 'center y', 'y_mm', 'mid_y',
-    'pos y', 'y coordinate', 'y-pos',
+    'y',
+    'mid y',
+    'y(mm)',
+    'mid y(mm)',
+    'posy',
+    'center y',
+    'y_mm',
+    'mid_y',
+    'pos y',
+    'y coordinate',
+    'y-pos',
   ],
   CanonicalField.rotation: [
-    'rotation', 'rot', 'angle', 'orientation', 'rotate',
-    'theta', 'ang',
+    'rotation',
+    'rot',
+    'angle',
+    'orientation',
+    'rotate',
+    'theta',
+    'ang',
   ],
   CanonicalField.side: [
-    'layer', 'side', 'tb', 'top/bottom', 'board side', 'pcb layer',
-    'placement side', 'top bottom', 'layers',
+    'layer',
+    'side',
+    'tb',
+    'top/bottom',
+    'board side',
+    'pcb layer',
+    'placement side',
+    'top bottom',
+    'layers',
   ],
   CanonicalField.value: [
-    'value', 'val', 'comment', 'part value', 'component value',
-    'description', 'part', 'name',
+    'value',
+    'val',
+    'comment',
+    'part value',
+    'component value',
+    'description',
+    'part',
+    'name',
   ],
   CanonicalField.footprint: [
-    'footprint', 'package', 'package_reference', 'package ref',
-    'fp', 'component package', 'case', 'enclosure',
+    'footprint',
+    'package',
+    'package_reference',
+    'package ref',
+    'fp',
+    'component package',
+    'case',
+    'enclosure',
   ],
 };
 
 /// Value-shape validators for semantic scoring.
 final _numeric = RegExp(r'^-?\d+(\.\d+)?$');
-final _sideValues = {'top', 't', 'bottom', 'bot', 'b', 'f', 'r', 'f.cu', 'b.cu', '1', '2', 'front', 'back'};
+final _sideValues = {
+  'top',
+  't',
+  'bottom',
+  'bot',
+  'b',
+  'f',
+  'r',
+  'f.cu',
+  'b.cu',
+  '1',
+  '2',
+  'front',
+  'back',
+};
 final _designatorPattern = RegExp(r'^[A-Za-z]{1,4}\d+');
 
 class FieldInferenceService {
@@ -47,7 +111,9 @@ class FieldInferenceService {
         resolvedColumns: {},
         candidates: {},
         confidence: {},
-        unresolvedRequired: CanonicalField.values.where((f) => f.isRequired).toList(),
+        unresolvedRequired: CanonicalField.values
+            .where((f) => f.isRequired)
+            .toList(),
         diagnostics: ['File has no columns.'],
       );
     }
@@ -60,20 +126,25 @@ class FieldInferenceService {
         final samples = doc.sampleColumn(ci);
         final score = _scoreColumn(field, header, samples);
         if (score > 0.0) {
-          scored.add(FieldCandidate(
-            columnIndex: ci,
-            headerName: ci < doc.originalHeaders.length ? doc.originalHeaders[ci] : header,
-            score: score,
-            reason: _reason(field, header, samples, score),
-          ));
+          scored.add(
+            FieldCandidate(
+              columnIndex: ci,
+              headerName: ci < doc.originalHeaders.length
+                  ? doc.originalHeaders[ci]
+                  : header,
+              score: score,
+              reason: _reason(field, header, samples, score),
+            ),
+          );
         }
       }
       scored.sort((a, b) => b.score.compareTo(a.score));
       allCandidates[field] = scored;
     }
 
-    // Resolve: greedily assign best candidate per field, avoid column reuse for
-    // mutually-competing numeric fields (x/y/rotation).
+    // Resolve: greedily assign the best unused candidate per field. Canonical
+    // fields represent distinct source columns; reusing one can incorrectly
+    // turn a value such as "10uF" into both the value and package.
     final resolved = <CanonicalField, int>{};
     final usedCols = <int>{};
     final confidence = <CanonicalField, double>{};
@@ -83,9 +154,7 @@ class FieldInferenceService {
       final cands = allCandidates[field] ?? [];
       FieldCandidate? chosen;
       for (final c in cands) {
-        // Allow side/value/footprint to share cols if needed, but not x/y/rot
-        final competitive = {CanonicalField.x, CanonicalField.y, CanonicalField.rotation};
-        if (competitive.contains(field) && usedCols.contains(c.columnIndex)) continue;
+        if (usedCols.contains(c.columnIndex)) continue;
         chosen = c;
         break;
       }
@@ -98,10 +167,18 @@ class FieldInferenceService {
 
     // Determine unresolved required fields
     final unresolved = CanonicalField.values
-        .where((f) => f.isRequired && (resolved[f] == null || (confidence[f] ?? 0) < 0.30))
+        .where(
+          (f) =>
+              f.isRequired &&
+              (resolved[f] == null || (confidence[f] ?? 0) < 0.30),
+        )
         .toList();
 
-    final diagnostics = _buildDiagnostics(resolved, confidence, doc.originalHeaders);
+    final diagnostics = _buildDiagnostics(
+      resolved,
+      confidence,
+      doc.originalHeaders,
+    );
 
     return SchemaMatchResult(
       resolvedColumns: resolved,
@@ -112,7 +189,11 @@ class FieldInferenceService {
     );
   }
 
-  static double _scoreColumn(CanonicalField field, String header, List<String> samples) {
+  static double _scoreColumn(
+    CanonicalField field,
+    String header,
+    List<String> samples,
+  ) {
     double score = 0.0;
 
     // ── Header alias matching ────────────────────────────────────────────────
@@ -156,30 +237,31 @@ class FieldInferenceService {
         if (_rotationLike(samples)) score += 0.15;
 
       case CanonicalField.side:
-        final sideFraction = samples
-                .where((s) => _sideValues.contains(s.toLowerCase()))
-                .length /
+        final sideFraction =
+            samples.where((s) => _sideValues.contains(s.toLowerCase())).length /
             samples.length;
         score += sideFraction * 0.40;
 
       case CanonicalField.designator:
         final desFraction =
             samples.where((s) => _designatorPattern.hasMatch(s)).length /
-                samples.length;
+            samples.length;
         score += desFraction * 0.40;
 
       case CanonicalField.value:
         // Values are short strings with mixed alpha-numeric
-        final valFraction = samples
-                .where((s) => s.isNotEmpty && s.length < 20)
-                .length /
+        final valFraction =
+            samples.where((s) => s.isNotEmpty && s.length < 20).length /
             samples.length;
         score += valFraction * 0.15;
 
       case CanonicalField.footprint:
         // Footprints often contain underscores, colons, or package names
-        final fpFraction = samples
-                .where((s) => s.contains('_') || s.contains(':') || s.contains('-'))
+        final fpFraction =
+            samples
+                .where(
+                  (s) => s.contains('_') || s.contains(':') || s.contains('-'),
+                )
                 .length /
             samples.length;
         score += fpFraction * 0.20;
@@ -190,8 +272,9 @@ class FieldInferenceService {
 
   static double _numericFraction(List<String> samples) {
     if (samples.isEmpty) return 0.0;
-    final numeric =
-        samples.where((s) => _numeric.hasMatch(s.replaceAll('mm', '').trim())).length;
+    final numeric = samples
+        .where((s) => _numeric.hasMatch(s.replaceAll('mm', '').trim()))
+        .length;
     return numeric / samples.length;
   }
 
@@ -209,14 +292,21 @@ class FieldInferenceService {
     return samples.isNotEmpty && hits / samples.length > 0.5;
   }
 
-  static String _reason(CanonicalField field, String header, List<String> samples, double score) {
+  static String _reason(
+    CanonicalField field,
+    String header,
+    List<String> samples,
+    double score,
+  ) {
     final aliases = _aliases[field] ?? [];
     final h = header.toLowerCase();
     if (aliases.contains(h)) return 'Exact header match "$header"';
     for (final a in aliases) {
       if (h.contains(a)) return 'Header "$header" contains alias "$a"';
     }
-    if (score >= 0.5) return 'Value-shape analysis (${(score * 100).toInt()}% confidence)';
+    if (score >= 0.5) {
+      return 'Value-shape analysis (${(score * 100).toInt()}% confidence)';
+    }
     return 'Partial match (${(score * 100).toInt()}% confidence)';
   }
 
@@ -236,7 +326,9 @@ class FieldInferenceService {
           diags.add('${field.label}: not found (optional)');
         }
       } else {
-        final hdr = col < originalHeaders.length ? originalHeaders[col] : 'col $col';
+        final hdr = col < originalHeaders.length
+            ? originalHeaders[col]
+            : 'col $col';
         final pct = (conf * 100).toInt();
         diags.add('${field.label}: detected from "$hdr" ($pct% confidence)');
       }
@@ -273,12 +365,15 @@ class FieldInferenceService {
     int k = 0;
     for (int i = 0; i < s1.length; i++) {
       if (!s1Matches[i]) continue;
-      while (!s2Matches[k]) { k++; }
+      while (!s2Matches[k]) {
+        k++;
+      }
       if (s1[i] != s2[k]) transpositions++;
       k++;
     }
 
-    final jaro = (matches / s1.length +
+    final jaro =
+        (matches / s1.length +
             matches / s2.length +
             (matches - transpositions / 2) / matches) /
         3;
@@ -286,7 +381,11 @@ class FieldInferenceService {
     // Winkler prefix boost
     int prefix = 0;
     for (int i = 0; i < math.min(4, math.min(s1.length, s2.length)); i++) {
-      if (s1[i] == s2[i]) { prefix++; } else { break; }
+      if (s1[i] == s2[i]) {
+        prefix++;
+      } else {
+        break;
+      }
     }
 
     return jaro + prefix * 0.1 * (1 - jaro);

@@ -35,10 +35,14 @@ class NormalizationService {
       final xMm = _parseCoord(xRaw);
       final yMm = _parseCoord(yRaw);
       if (xMm == null) {
-        warnings.add('Row ${row.originalLineIndex + 1}: cannot parse X="$xRaw"');
+        warnings.add(
+          'Row ${row.originalLineIndex + 1}: cannot parse X="$xRaw"',
+        );
       }
       if (yMm == null) {
-        warnings.add('Row ${row.originalLineIndex + 1}: cannot parse Y="$yRaw"');
+        warnings.add(
+          'Row ${row.originalLineIndex + 1}: cannot parse Y="$yRaw"',
+        );
       }
       if (xMm == null || yMm == null) continue; // skip unparseable rows
 
@@ -50,31 +54,39 @@ class NormalizationService {
       // ── Side ────────────────────────────────────────────────────────────────
       final sideRaw = _cell(row, schema[CanonicalField.side]);
       final side = sideRaw.isEmpty
-          ? BoardSide.top // default assumption
+          ? (doc.inferredSide == BoardSide.unknown
+                ? BoardSide.top
+                : doc.inferredSide)
           : BoardSide.fromString(sideRaw);
       if (side == BoardSide.unknown) {
-        warnings.add('Row ${row.originalLineIndex + 1}: unrecognised side "$sideRaw"; '
-            'side-filtering may be inaccurate');
+        warnings.add(
+          'Row ${row.originalLineIndex + 1}: unrecognised side "$sideRaw"; '
+          'side-filtering may be inaccurate',
+        );
       }
 
       // ── Value / Footprint ───────────────────────────────────────────────────
       final value = _sanitizeText(_cell(row, schema[CanonicalField.value]));
-      final footprint = _sanitizeText(_cell(row, schema[CanonicalField.footprint]));
+      final footprint = _sanitizeText(
+        _cell(row, schema[CanonicalField.footprint]),
+      );
 
-      records.add(PlacementRecord(
-        id: _uuid.v4(),
-        designator: designator,
-        value: value,
-        footprint: footprint,
-        xMm: xMm,
-        yMm: yMm,
-        rotationDeg: rotDeg,
-        side: side,
-        sourceRowIndex: row.originalLineIndex,
-        sourceHeaders: List.unmodifiable(headerList),
-        rawRow: List.unmodifiable(rawCells),
-        warnings: List.unmodifiable(warnings),
-      ));
+      records.add(
+        PlacementRecord(
+          id: _uuid.v4(),
+          designator: designator,
+          value: value,
+          footprint: footprint,
+          xMm: xMm,
+          yMm: yMm,
+          rotationDeg: rotDeg,
+          side: side,
+          sourceRowIndex: row.originalLineIndex,
+          sourceHeaders: List.unmodifiable(headerList),
+          rawRow: List.unmodifiable(rawCells),
+          warnings: List.unmodifiable(warnings),
+        ),
+      );
     }
 
     return records;

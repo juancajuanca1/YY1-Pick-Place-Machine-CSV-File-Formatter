@@ -17,17 +17,21 @@ class GroupingService {
       groupMap[r.groupKey]!.add(r);
     }
 
-    final groups = groupMap.entries.map((e) {
-      final first = e.value.first;
-      return AssignmentGroup(
-        groupKey: e.key,
-        displayValue: first.value.isEmpty ? '(no value)' : first.value,
-        displayFootprint: first.footprint.isEmpty ? '(no footprint)' : first.footprint,
-        side: first.side,
-        records: List.unmodifiable(e.value),
-      );
-    }).toList()
-      ..sort((a, b) => orderMap[a.groupKey]!.compareTo(orderMap[b.groupKey]!));
+    final groups =
+        groupMap.entries.map((e) {
+          final first = e.value.first;
+          return AssignmentGroup(
+            groupKey: e.key,
+            displayValue: first.value.isEmpty ? '(no value)' : first.value,
+            displayFootprint: first.footprint.isEmpty
+                ? '(no footprint)'
+                : first.footprint,
+            side: first.side,
+            records: List.unmodifiable(e.value),
+          );
+        }).toList()..sort(
+          (a, b) => orderMap[a.groupKey]!.compareTo(orderMap[b.groupKey]!),
+        );
 
     return groups;
   }

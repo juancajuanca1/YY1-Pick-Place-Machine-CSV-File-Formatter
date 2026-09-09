@@ -1,3 +1,5 @@
+import 'board_side.dart';
+
 /// A source-format-agnostic representation of a delimited placement file.
 class TabularRow {
   final List<String> cells;
@@ -5,7 +7,8 @@ class TabularRow {
 
   const TabularRow({required this.cells, required this.originalLineIndex});
 
-  String operator [](int i) => (i >= 0 && i < cells.length) ? cells[i].trim() : '';
+  String operator [](int i) =>
+      (i >= 0 && i < cells.length) ? cells[i].trim() : '';
   int get length => cells.length;
 }
 
@@ -17,6 +20,12 @@ class TabularDocument {
   final String delimiter;
   final List<String> rawLines;
 
+  /// Side inferred from a vendor filename such as *_front.csv or *_bottom.pos.
+  final BoardSide inferredSide;
+
+  /// True when the source had no header and canonical headers were synthesized.
+  final bool hasSyntheticHeaders;
+
   const TabularDocument({
     required this.fileName,
     required this.headers,
@@ -24,6 +33,8 @@ class TabularDocument {
     required this.rows,
     required this.delimiter,
     required this.rawLines,
+    this.inferredSide = BoardSide.unknown,
+    this.hasSyntheticHeaders = false,
   });
 
   int get columnCount => headers.length;

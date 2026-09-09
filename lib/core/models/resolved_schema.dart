@@ -1,34 +1,32 @@
 /// Canonical fields the import contract requires.
 enum CanonicalField {
   designator, // required
-  x,          // required
-  y,          // required
-  rotation,   // required
-  side,       // required
-  value,      // recommended
-  footprint,  // recommended
+  x, // required
+  y, // required
+  rotation, // required
+  side, // required
+  value, // recommended
+  footprint, // recommended
 }
 
 extension CanonicalFieldExt on CanonicalField {
   bool get isRequired => switch (this) {
-        CanonicalField.designator ||
-        CanonicalField.x ||
-        CanonicalField.y ||
-        CanonicalField.rotation ||
-        CanonicalField.side =>
-          true,
-        _ => false,
-      };
+    CanonicalField.designator ||
+    CanonicalField.x ||
+    CanonicalField.y ||
+    CanonicalField.rotation => true,
+    _ => false,
+  };
 
   String get label => switch (this) {
-        CanonicalField.designator => 'Designator',
-        CanonicalField.x => 'X Coordinate',
-        CanonicalField.y => 'Y Coordinate',
-        CanonicalField.rotation => 'Rotation',
-        CanonicalField.side => 'Side / Layer',
-        CanonicalField.value => 'Component Value',
-        CanonicalField.footprint => 'Footprint',
-      };
+    CanonicalField.designator => 'Designator',
+    CanonicalField.x => 'X Coordinate',
+    CanonicalField.y => 'Y Coordinate',
+    CanonicalField.rotation => 'Rotation',
+    CanonicalField.side => 'Side / Layer',
+    CanonicalField.value => 'Component Value',
+    CanonicalField.footprint => 'Footprint',
+  };
 }
 
 /// A scored candidate for a single canonical field.

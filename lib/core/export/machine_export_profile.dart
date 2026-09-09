@@ -17,8 +17,9 @@ abstract class MachineExportProfile {
 
   Map<String, String> rowFields(PlacementRecord r);
 
-  String serializeRow(Map<String, String> fields) =>
-      headerColumns.map((h) => _escape(fields[h] ?? '', delimiter)).join(delimiter);
+  String serializeRow(Map<String, String> fields) => headerColumns
+      .map((h) => _escape(fields[h] ?? '', delimiter))
+      .join(delimiter);
 
   String _escape(String s, String delim) {
     if (s.contains(delim) || s.contains('"') || s.contains('\n')) {
@@ -54,20 +55,20 @@ class Yy1ImportProfile extends MachineExportProfile {
   // – they match the format the machine writes and reads.
   @override
   List<String> get headerColumns => const [
-        'Designator',
-        'Comment',
-        'Footprint',
-        'Mid X(mm)',
-        'Mid Y(mm) ',
-        'Rotation',
-        'Head ',
-        'FeederNo',
-        'Mount Speed(%)',
-        'Pick Height(mm)',
-        'Place Height(mm)',
-        'Mode',
-        'Skip',
-      ];
+    'Designator',
+    'Comment',
+    'Footprint',
+    'Mid X(mm)',
+    'Mid Y(mm) ',
+    'Rotation',
+    'Head ',
+    'FeederNo',
+    'Mount Speed(%)',
+    'Pick Height(mm)',
+    'Place Height(mm)',
+    'Mode',
+    'Skip',
+  ];
 
   /// Builds the required NEODEN preamble.  The separator blank lines use
   /// 13 commas (14 empty fields) exactly as the machine writes them.
@@ -90,20 +91,20 @@ class Yy1ImportProfile extends MachineExportProfile {
 
   @override
   Map<String, String> rowFields(PlacementRecord r) => {
-        'Designator':       r.designator,
-        'Comment':          r.value,
-        'Footprint':        r.footprint,
-        'Mid X(mm)':        _fmtXY(r.xMm),
-        'Mid Y(mm) ':       _fmtXY(r.yMm),
-        'Rotation':         _fmtRot(r.rotationDeg),
-        'Head ':            '0',
-        'FeederNo':         '${r.feederSlot ?? 1}',
-        'Mount Speed(%)':   '${r.mountSpeed}',
-        'Pick Height(mm)':  _fmtH(r.pickHeight),
-        'Place Height(mm)': _fmtH(r.placeHeight),
-        'Mode':             '1',
-        'Skip':             r.enabled ? '0' : '1',
-      };
+    'Designator': r.designator,
+    'Comment': r.value,
+    'Footprint': r.footprint,
+    'Mid X(mm)': _fmtXY(r.xMm),
+    'Mid Y(mm) ': _fmtXY(r.yMm),
+    'Rotation': _fmtRot(r.rotationDeg),
+    'Head ': '0',
+    'FeederNo': '${r.feederSlot ?? 1}',
+    'Mount Speed(%)': '${r.mountSpeed}',
+    'Pick Height(mm)': _fmtH(r.pickHeight),
+    'Place Height(mm)': _fmtH(r.placeHeight),
+    'Mode': '1',
+    'Skip': r.enabled ? '0' : '1',
+  };
 
   /// XY coordinates: 2 decimal places (matches sample: 31.23, 17.52)
   static String _fmtXY(double v) => v.toStringAsFixed(2);

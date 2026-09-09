@@ -26,23 +26,31 @@ class CsvExportWriter {
 
     // Column header row
     buf.write(
-        profile.headerColumns.join(profile.delimiter) + profile.lineEnding);
+      profile.headerColumns.join(profile.delimiter) + profile.lineEnding,
+    );
 
     // Rows: filter → sort by slot then designator
-    final rows = project.records
-        .where((r) =>
-            r.enabled &&
-            !r.isFiducial &&
-            (sideFilter == BoardSide.unknown || r.side == sideFilter) &&
-            r.feederSlot != null)
-        .toList()
-      ..sort((a, b) {
-        final slotCmp = (a.feederSlot ?? 0).compareTo(b.feederSlot ?? 0);
-        return slotCmp != 0 ? slotCmp : a.designator.compareTo(b.designator);
-      });
+    final rows =
+        project.records
+            .where(
+              (r) =>
+                  r.enabled &&
+                  !r.isFiducial &&
+                  (sideFilter == BoardSide.unknown || r.side == sideFilter) &&
+                  r.feederSlot != null,
+            )
+            .toList()
+          ..sort((a, b) {
+            final slotCmp = (a.feederSlot ?? 0).compareTo(b.feederSlot ?? 0);
+            return slotCmp != 0
+                ? slotCmp
+                : a.designator.compareTo(b.designator);
+          });
 
     for (final r in rows) {
-      buf.write(profile.serializeRow(profile.rowFields(r)) + profile.lineEnding);
+      buf.write(
+        profile.serializeRow(profile.rowFields(r)) + profile.lineEnding,
+      );
     }
 
     return buf.toString();
@@ -55,8 +63,9 @@ class CsvExportWriter {
     final allLines = csvContent.split(RegExp(r'\r?\n'));
 
     // Find where the Designator header row is
-    final headerIdx = allLines
-        .indexWhere((l) => l.trim().startsWith('Designator'));
+    final headerIdx = allLines.indexWhere(
+      (l) => l.trim().startsWith('Designator'),
+    );
 
     if (headerIdx < 0) {
       issues.add('Export is missing the Designator column header row.');
@@ -79,13 +88,15 @@ class CsvExportWriter {
       final parts = dataLines[i].split(profile.delimiter);
       if (parts.length != expectedCols) {
         issues.add(
-            'Data row ${i + 1}: ${parts.length} columns (expected $expectedCols).');
+          'Data row ${i + 1}: ${parts.length} columns (expected $expectedCols).',
+        );
       }
       // Numeric checks: Mid X(3), Mid Y(4), Rotation(5), FeederNo(7)
       for (final ci in [3, 4, 5, 7]) {
         if (ci < parts.length && double.tryParse(parts[ci].trim()) == null) {
           issues.add(
-              'Data row ${i + 1}: non-numeric in column ${ci + 1}: "${parts[ci].trim()}"');
+            'Data row ${i + 1}: non-numeric in column ${ci + 1}: "${parts[ci].trim()}"',
+          );
         }
       }
     }

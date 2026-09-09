@@ -18,7 +18,12 @@ class RawFileState {
   final bool isLoading;
   final String? error;
 
-  const RawFileState({this.fileName, this.content, this.isLoading = false, this.error});
+  const RawFileState({
+    this.fileName,
+    this.content,
+    this.isLoading = false,
+    this.error,
+  });
 
   RawFileState copyWith({
     String? fileName,
@@ -27,26 +32,28 @@ class RawFileState {
     String? error,
     bool clearContent = false,
     bool clearError = false,
-  }) =>
-      RawFileState(
-        fileName: fileName ?? this.fileName,
-        content: clearContent ? null : (content ?? this.content),
-        isLoading: isLoading ?? this.isLoading,
-        error: clearError ? null : (error ?? this.error),
-      );
+  }) => RawFileState(
+    fileName: fileName ?? this.fileName,
+    content: clearContent ? null : (content ?? this.content),
+    isLoading: isLoading ?? this.isLoading,
+    error: clearError ? null : (error ?? this.error),
+  );
 }
 
 class RawFileNotifier extends StateNotifier<RawFileState> {
   RawFileNotifier() : super(const RawFileState());
-  void setLoading(String name) => state = RawFileState(fileName: name, isLoading: true);
+  void setLoading(String name) =>
+      state = RawFileState(fileName: name, isLoading: true);
   void setContent(String name, String content) =>
       state = RawFileState(fileName: name, content: content);
-  void setError(String err) => state = state.copyWith(isLoading: false, error: err);
+  void setError(String err) =>
+      state = state.copyWith(isLoading: false, error: err);
   void reset() => state = const RawFileState();
 }
 
-final rawFileProvider =
-    StateNotifierProvider<RawFileNotifier, RawFileState>((_) => RawFileNotifier());
+final rawFileProvider = StateNotifierProvider<RawFileNotifier, RawFileState>(
+  (_) => RawFileNotifier(),
+);
 
 // ══════════════════════════════════════════════════════════════════════════════
 // TabularDocument – derived
@@ -74,8 +81,10 @@ final schemaMatchProvider = Provider<SchemaMatchResult?>((ref) {
 
 class ResolvedSchemaNotifier extends StateNotifier<ResolvedSchema?> {
   ResolvedSchemaNotifier() : super(null);
-  void accept(SchemaMatchResult match) =>
-      state = ResolvedSchema(columns: Map.from(match.resolvedColumns), userConfirmed: false);
+  void accept(SchemaMatchResult match) => state = ResolvedSchema(
+    columns: Map.from(match.resolvedColumns),
+    userConfirmed: false,
+  );
   void confirm(Map<CanonicalField, int> userMapping) =>
       state = ResolvedSchema(columns: userMapping, userConfirmed: true);
   void reset() => state = null;
@@ -83,7 +92,8 @@ class ResolvedSchemaNotifier extends StateNotifier<ResolvedSchema?> {
 
 final resolvedSchemaProvider =
     StateNotifierProvider<ResolvedSchemaNotifier, ResolvedSchema?>(
-        (_) => ResolvedSchemaNotifier());
+      (_) => ResolvedSchemaNotifier(),
+    );
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Placement project (normalized records + user assignments)
@@ -127,6 +137,15 @@ class ProjectNotifier extends StateNotifier<PlacementProject?> {
   void toggleEnabled(String id) =>
       _update((r) => r.id == id ? r.copyWith(enabled: !r.enabled) : r);
 
+  void setFiducial(String id, bool value) => _update(
+    (r) => r.id == id
+        ? r.copyWith(fiducialOverride: value, clearFeederSlot: value)
+        : r,
+  );
+
+  void useAutomaticFiducialDetection(String id) =>
+      _update((r) => r.id == id ? r.copyWith(clearFiducialOverride: true) : r);
+
   void setMountSpeed(String id, int speed) =>
       _update((r) => r.id == id ? r.copyWith(mountSpeed: speed) : r);
 
@@ -167,7 +186,9 @@ class ProjectNotifier extends StateNotifier<PlacementProject?> {
 }
 
 final projectProvider =
-    StateNotifierProvider<ProjectNotifier, PlacementProject?>( (_) => ProjectNotifier());
+    StateNotifierProvider<ProjectNotifier, PlacementProject?>(
+      (_) => ProjectNotifier(),
+    );
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Validation – derived

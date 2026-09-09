@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:neoden_yy1_formatter/features/providers.dart';
+import 'package:neoden_yy1_formatter/features/home/home_navigation_button.dart';
 import 'package:neoden_yy1_formatter/core/export/csv_export_writer.dart';
 
 class ExportPreviewScreen extends ConsumerStatefulWidget {
@@ -53,17 +54,20 @@ class _ExportPreviewScreenState extends ConsumerState<ExportPreviewScreen> {
     if (savePath == null) return;
 
     // On Linux the GTK picker doesn't auto-append the extension, so enforce it.
-    final finalPath =
-        savePath.toLowerCase().endsWith('.csv') ? savePath : '$savePath.csv';
+    final finalPath = savePath.toLowerCase().endsWith('.csv')
+        ? savePath
+        : '$savePath.csv';
 
     await File(finalPath).writeAsString(_previewContent!, flush: true);
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Saved: $finalPath'),
-        backgroundColor: Colors.green.shade700,
-        behavior: SnackBarBehavior.floating,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Saved: $finalPath'),
+          backgroundColor: Colors.green.shade700,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -75,9 +79,12 @@ class _ExportPreviewScreenState extends ConsumerState<ExportPreviewScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Export Preview',
-            style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text(
+          'Export Preview',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
         actions: [
+          const HomeNavigationButton(),
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: FilledButton.icon(
@@ -102,26 +109,32 @@ class _ExportPreviewScreenState extends ConsumerState<ExportPreviewScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(children: [
-                    Icon(Icons.error_outline_rounded,
-                        color: colors.error, size: 18),
-                    const SizedBox(width: 8),
-                    Text('Export validation issues:',
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(
-                                color: colors.error,
-                                fontWeight: FontWeight.w700)),
-                  ]),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.error_outline_rounded,
+                        color: colors.error,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Export validation issues:',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colors.error,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
                   for (final issue in report.issues)
                     Padding(
                       padding: const EdgeInsets.only(left: 26, top: 4),
-                      child: Text(issue,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: colors.error)),
+                      child: Text(
+                        issue,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: colors.error),
+                      ),
                     ),
                 ],
               ),
@@ -131,16 +144,22 @@ class _ExportPreviewScreenState extends ConsumerState<ExportPreviewScreen> {
             Container(
               color: Colors.green.shade50,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(children: [
-                const Icon(Icons.check_circle_outline_rounded,
-                    color: Colors.green, size: 18),
-                const SizedBox(width: 8),
-                Text('All rows pass structural validation.',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: Colors.green.shade800)),
-              ]),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.check_circle_outline_rounded,
+                    color: Colors.green,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'All rows pass structural validation.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.green.shade800,
+                    ),
+                  ),
+                ],
+              ),
             ),
 
           // ── Warnings ─────────────────────────────────────────────────
@@ -152,11 +171,12 @@ class _ExportPreviewScreenState extends ConsumerState<ExportPreviewScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   for (final w in validation.warnings)
-                    Text('⚠  $w',
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(color: Colors.orange.shade900)),
+                    Text(
+                      '⚠  $w',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.orange.shade900,
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -170,7 +190,9 @@ class _ExportPreviewScreenState extends ConsumerState<ExportPreviewScreen> {
                     child: SelectableText(
                       _previewContent!,
                       style: const TextStyle(
-                          fontFamily: 'monospace', fontSize: 12),
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                      ),
                     ),
                   ),
           ),
