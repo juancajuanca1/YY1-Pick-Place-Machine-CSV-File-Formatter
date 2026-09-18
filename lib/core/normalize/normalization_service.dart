@@ -18,6 +18,10 @@ class NormalizationService {
   ) {
     final records = <PlacementRecord>[];
     final headerList = doc.originalHeaders;
+    final descriptionIndex = _findHeaderIndex(doc, const ['description']);
+    final valueHeader = _headerAt(doc, schema[CanonicalField.value]);
+    final useDescriptionValueFallback =
+        valueHeader == 'comment' && descriptionIndex >= 0;
 
     for (final row in doc.rows) {
       final rawCells = [for (int i = 0; i < doc.columnCount; i++) row[i]];
@@ -66,10 +70,21 @@ class NormalizationService {
       }
 
       // ── Value / Footprint ───────────────────────────────────────────────────
-      final value = _sanitizeText(_cell(row, schema[CanonicalField.value]));
-      final footprint = _sanitizeText(
+      final rawValue = _sanitizeText(_cell(row, schema[CanonicalField.value]));
+      final rawFootprint = _sanitizeText(
         _cell(row, schema[CanonicalField.footprint]),
       );
+      final description = descriptionIndex >= 0
+          ? _sanitizeText(_cell(row, descriptionIndex))
+          : '';
+      final normalizedIdentity = _normalizeIdentity(
+        rawValue: rawValue,
+        rawFootprint: rawFootprint,
+        description: description,
+        useDescriptionValueFallback: useDescriptionValueFallback,
+      );
+      final value = normalizedIdentity.value;
+      final footprint = normalizedIdentity.footprint;
 
       records.add(
         PlacementRecord(
@@ -109,4 +124,85 @@ class NormalizationService {
 
   static String _sanitizeText(String s) =>
       s.replaceAll(RegExp(r'[\x00-\x1F]'), '').trim();
+
+  static int _findHeaderIndex(TabularDocument doc, List<String> headers) {
+    for (int i = 0; i < doc.headers.length; i++) {
+      if (headers.contains(doc.headers[i])) return i;
+    }
+    return -1;
+  }
+
+  static String _headerAt(TabularDocument doc, int colIndex) {
+    if (colIndex < 0 || colIndex >= doc.headers.length) return '';
+    return doc.headers[colIndex];
+  }
+
+  static ({String value, String footprint}) _normalizeIdentity({
+    required String rawValue,
+    required String rawFootprint,
+    required String description,
+    required bool useDescriptionValueFallback,
+  }) {
+    if (!useDescriptionValueFallback || description.isEmpty) {
+      return (value: rawValue, footprint: rawFootprint);
+    }
+
+    final extractedValue = _extractPassiveValue(description);
+    if (extractedValue == null) {
+      return (value: rawValue, footprint: rawFootprint);
+    }
+
+    final extractedPackage = _extractPackage(description);
+    return (
+      value: extractedValue,
+      footprint: extractedPackage ?? rawFootprint,
+    );
+  }
+
+  static String? _extractPassiveValue(String rawDescription) {
+    final description = rawDescription.replaceAll(RegExp(r'[µμ]'), 'u');
+
+    final resistor = RegExp(
+      r'\b(\d+(?:\.\d+)?)\s*([kmg]?)\s*ohm\b',
+      caseSensitive: false,
+    ).firstMatch(description);
+    if (resistor != null) {
+      final magnitude = resistor.group(1)!;
+      final prefix = (resistor.group(2) ?? '').toUpperCase();
+      return prefix.isEmpty ? '${magnitude}R' : '$magnitude$prefix';
+    }
+
+    final capacitor = RegExp(
+      r'\b(\d+(?:\.\d+)?)\s*([pnum]?)f\b',
+      caseSensitive: false,
+    ).firstMatch(description);
+    if (capacitor != null) {
+      final magnitude = capacitor.group(1)!;
+      final prefix = (capacitor.group(2) ?? '').toLowerCase();
+      return '$magnitude${prefix}F';
+    }
+
+    final inductor = RegExp(
+      r'\b(\d+(?:\.\d+)?)\s*([pnum]?)h\b',
+      caseSensitive: false,
+    ).firstMatch(description);
+    if (inductor != null) {
+      final magnitude = inductor.group(1)!;
+      final prefix = (inductor.group(2) ?? '').toLowerCase();
+      return '$magnitude${prefix}H';
+    }
+
+    return null;
+  }
+
+  static String? _extractPackage(String description) {
+    final passiveSize = RegExp(
+      r'\b(01005|0201|0402|0603|0805|1206|1210|1812|2010|2512)\b',
+      caseSensitive: false,
+    ).firstMatch(description);
+    if (passiveSize != null) {
+      return passiveSize.group(1)!.toUpperCase();
+    }
+    return null;
+  }
 }

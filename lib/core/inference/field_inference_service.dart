@@ -88,8 +88,12 @@ const _aliases = <CanonicalField, List<String>>{
 final _numeric = RegExp(r'^-?\d+(\.\d+)?$');
 final _sideValues = {
   'top',
+  'toplayer',
+  'top layer',
   't',
   'bottom',
+  'bottomlayer',
+  'bottom layer',
   'bot',
   'b',
   'f',

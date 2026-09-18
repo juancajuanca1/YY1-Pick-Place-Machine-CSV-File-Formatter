@@ -712,7 +712,7 @@ class _ComponentRow extends ConsumerWidget {
                       hint: '—',
                       isInt: true,
                       isDuplicate: isDuplicate,
-                      onChanged: (v) => ref
+                      onSave: (v) => ref
                           .read(projectProvider.notifier)
                           .setFeederSlot(record.id, int.tryParse(v)),
                     ),
@@ -937,11 +937,11 @@ class _ComponentRow extends ConsumerWidget {
 class _InlineField extends StatefulWidget {
   final String value, hint;
   final bool isInt, isDuplicate;
-  final ValueChanged<String> onChanged;
+  final ValueChanged<String> onSave;
   const _InlineField({
     required this.value,
     required this.hint,
-    required this.onChanged,
+    required this.onSave,
     this.isInt = false,
     this.isDuplicate = false,
   });
@@ -951,16 +951,25 @@ class _InlineField extends StatefulWidget {
 
 class _InlineFieldState extends State<_InlineField> {
   late final TextEditingController _ctrl;
+  late final FocusNode _focus;
+  bool _editing = false;
+
   @override
   void initState() {
     super.initState();
     _ctrl = TextEditingController(text: widget.value);
+    _focus = FocusNode()
+      ..addListener(() {
+        if (!_focus.hasFocus && _editing) {
+          _commit();
+        }
+      });
   }
 
   @override
   void didUpdateWidget(_InlineField old) {
     super.didUpdateWidget(old);
-    if (old.value != widget.value && _ctrl.text != widget.value) {
+    if (!_editing && old.value != widget.value && _ctrl.text != widget.value) {
       _ctrl.text = widget.value;
     }
   }
@@ -968,7 +977,13 @@ class _InlineFieldState extends State<_InlineField> {
   @override
   void dispose() {
     _ctrl.dispose();
+    _focus.dispose();
     super.dispose();
+  }
+
+  void _commit() {
+    _editing = false;
+    widget.onSave(_ctrl.text.trim());
   }
 
   @override
@@ -978,6 +993,7 @@ class _InlineFieldState extends State<_InlineField> {
       padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
       child: TextField(
         controller: _ctrl,
+        focusNode: _focus,
         keyboardType: TextInputType.number,
         inputFormatters: [
           FilteringTextInputFormatter.allow(
@@ -1016,7 +1032,10 @@ class _InlineFieldState extends State<_InlineField> {
             borderSide: BorderSide(color: colors.primary, width: 2),
           ),
         ),
-        onChanged: widget.onChanged,
+        onTap: () => _editing = true,
+        onChanged: (_) => _editing = true,
+        onSubmitted: (_) => _commit(),
+        onTapOutside: (_) => _focus.unfocus(),
       ),
     );
   }
