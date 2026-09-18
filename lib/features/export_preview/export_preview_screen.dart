@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neoden_yy1_formatter/features/providers.dart';
 import 'package:neoden_yy1_formatter/features/home/home_navigation_button.dart';
 import 'package:neoden_yy1_formatter/core/export/csv_export_writer.dart';
+import 'package:neoden_yy1_formatter/core/models/board_side.dart';
+import 'package:neoden_yy1_formatter/core/models/placement_project.dart';
 
 class ExportPreviewScreen extends ConsumerStatefulWidget {
   const ExportPreviewScreen({super.key});
@@ -42,8 +44,7 @@ class _ExportPreviewScreenState extends ConsumerState<ExportPreviewScreen> {
     final project = ref.read(projectProvider);
     if (project == null || _previewContent == null) return;
 
-    final baseName =
-        '${project.sourceFileName.replaceAll(RegExp(r'\.[^.]+$'), '')}_yy1.csv';
+    final baseName = _buildSideFileName(project, project.exportSide);
 
     final savePath = await FilePicker.platform.saveFile(
       dialogTitle: 'Save YY1 CSV',
@@ -71,11 +72,61 @@ class _ExportPreviewScreenState extends ConsumerState<ExportPreviewScreen> {
     }
   }
 
+  Future<void> _saveBothFiles() async {
+    final project = ref.read(projectProvider);
+    if (project == null) return;
+
+    final directory = await FilePicker.platform.getDirectoryPath(
+      dialogTitle: 'Select folder for Top and Bottom YY1 CSVs',
+    );
+    if (directory == null) return;
+
+    final writtenFiles = <String>[];
+    for (final side in [BoardSide.top, BoardSide.bottom]) {
+      if (!_canExportSide(project, side)) continue;
+
+      final csv = _writer.write(project, sideFilter: side);
+      final fileName = _buildSideFileName(project, side);
+      final path = '$directory${Platform.pathSeparator}$fileName';
+      await File(path).writeAsString(csv, flush: true);
+      writtenFiles.add(fileName);
+    }
+
+    if (!mounted || writtenFiles.isEmpty) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Saved: ${writtenFiles.join(', ')}'),
+        backgroundColor: Colors.green.shade700,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  String _buildSideFileName(PlacementProject project, BoardSide side) {
+    final stem = project.sourceFileName.replaceAll(RegExp(r'\.[^.]+$'), '');
+    final sideName = side == BoardSide.bottom ? 'bottom' : 'top';
+    return '${stem}_${sideName}_yy1.csv';
+  }
+
+  bool _canExportSide(PlacementProject project, BoardSide side) {
+    final exportable = project.records.where(
+      (record) => record.enabled && !record.isFiducial && record.side == side,
+    );
+    return exportable.isNotEmpty &&
+        exportable.every((record) => record.feederSlot != null);
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final validation = ref.watch(validationProvider);
     final report = _report;
+    final project = ref.watch(projectProvider);
+    final canExportBoth =
+      project != null &&
+      _canExportSide(project, BoardSide.top) &&
+      _canExportSide(project, BoardSide.bottom);
 
     return Scaffold(
       appBar: AppBar(
@@ -85,6 +136,15 @@ class _ExportPreviewScreenState extends ConsumerState<ExportPreviewScreen> {
         ),
         actions: [
           const HomeNavigationButton(),
+          if (canExportBoth)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: FilledButton.tonalIcon(
+                onPressed: validation.canExport ? _saveBothFiles : null,
+                icon: const Icon(Icons.library_add_check_rounded),
+                label: const Text('Export Top + Bottom'),
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: FilledButton.icon(
@@ -94,7 +154,11 @@ class _ExportPreviewScreenState extends ConsumerState<ExportPreviewScreen> {
                 foregroundColor: Colors.white,
               ),
               icon: const Icon(Icons.download_rounded),
-              label: const Text('Export YY1 CSV'),
+              label: Text(
+                project == null
+                    ? 'Export YY1 CSV'
+                    : 'Export ${project.exportSide.label} CSV',
+              ),
             ),
           ),
         ],

@@ -108,23 +108,23 @@ class ProjectNotifier extends StateNotifier<PlacementProject?> {
 
   /// Sets the feeder slot for the given record.
   /// Auto-fill behaviour:
-  ///   - If the other records in the same group still have NO slot assigned,
-  ///     the new value is propagated to them automatically (first-time fill).
-  ///   - If a sibling already has a slot assigned, it is left untouched so
-  ///     each component can be changed individually afterwards.
+  ///   - If other matching records still have NO slot assigned, the new value
+  ///     is propagated to them automatically (first-time fill).
+  ///   - Once a record already has a slot, later edits stay local to the
+  ///     record being edited so each side/component can be changed later.
   void setFeederSlot(String id, int? slot) {
     final p = state;
     if (p == null) return;
     final target = p.records.where((r) => r.id == id).firstOrNull;
     if (target == null) return;
-    final gk = target.groupKey;
+    final assignmentKey = target.assignmentKey;
     _update((r) {
       if (r.id == id) {
         // Always update the record that was directly edited
         return r.copyWith(feederSlot: slot, clearFeederSlot: slot == null);
       }
-      if (r.groupKey == gk && r.feederSlot == null && slot != null) {
-        // Propagate only to siblings that are still unassigned
+      if (r.assignmentKey == assignmentKey && r.feederSlot == null && slot != null) {
+        // Propagate only to matching unassigned records across both sides.
         return r.copyWith(feederSlot: slot);
       }
       return r;

@@ -27,6 +27,10 @@ class PlacementProject {
   List<PlacementRecord> get exportableRecords =>
       records.where((r) => r.isExportReady && r.side == exportSide).toList();
 
+  bool get hasTopRecords => records.any((r) => r.side == BoardSide.top);
+
+  bool get hasBottomRecords => records.any((r) => r.side == BoardSide.bottom);
+
   /// All unique slot numbers assigned across incompatible group keys.
   List<int> get duplicateSlots {
     final slotToGroup = <int, String>{};
@@ -34,10 +38,10 @@ class PlacementProject {
     for (final r in records) {
       if (r.feederSlot == null) continue;
       final existing = slotToGroup[r.feederSlot!];
-      if (existing != null && existing != r.groupKey) {
+      if (existing != null && existing != r.assignmentKey) {
         dupes.add(r.feederSlot!);
       } else {
-        slotToGroup[r.feederSlot!] = r.groupKey;
+        slotToGroup[r.feederSlot!] = r.assignmentKey;
       }
     }
     return dupes.toList();

@@ -59,6 +59,10 @@ class PlacementRecord {
   String get groupKey =>
       '${value.trim().toLowerCase()}|${footprint.trim().toLowerCase()}|${side.name}';
 
+    /// Assignment identity shared across top and bottom for the same component.
+    String get assignmentKey =>
+      '${value.trim().toLowerCase()}|${footprint.trim().toLowerCase()}';
+
   /// True when this component is a fiducial mark (never needs a feeder slot).
   bool get isFiducial {
     if (fiducialOverride != null) return fiducialOverride!;
