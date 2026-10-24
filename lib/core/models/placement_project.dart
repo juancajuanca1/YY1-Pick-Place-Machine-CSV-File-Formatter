@@ -6,21 +6,25 @@ class PlacementProject {
   final String sourceFileName;
   final List<PlacementRecord> records;
   final BoardSide exportSide;
+  final Map<int, Set<String>> confirmedSlotGroups;
 
   const PlacementProject({
     required this.sourceFileName,
     required this.records,
     this.exportSide = BoardSide.top,
+    this.confirmedSlotGroups = const {},
   });
 
   PlacementProject copyWith({
     List<PlacementRecord>? records,
     BoardSide? exportSide,
+    Map<int, Set<String>>? confirmedSlotGroups,
   }) {
     return PlacementProject(
       sourceFileName: sourceFileName,
       records: records ?? this.records,
       exportSide: exportSide ?? this.exportSide,
+      confirmedSlotGroups: confirmedSlotGroups ?? this.confirmedSlotGroups,
     );
   }
 
@@ -38,7 +42,11 @@ class PlacementProject {
     for (final r in records) {
       if (r.feederSlot == null) continue;
       final existing = slotToGroup[r.feederSlot!];
-      if (existing != null && existing != r.assignmentKey) {
+      if (existing != null &&
+          existing != r.assignmentKey &&
+          !(confirmedSlotGroups[r.feederSlot]?.contains(existing) == true &&
+              confirmedSlotGroups[r.feederSlot]?.contains(r.assignmentKey) ==
+                  true)) {
         dupes.add(r.feederSlot!);
       } else {
         slotToGroup[r.feederSlot!] = r.assignmentKey;

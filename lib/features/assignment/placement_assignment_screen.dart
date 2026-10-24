@@ -712,9 +712,63 @@ class _ComponentRow extends ConsumerWidget {
                       hint: '—',
                       isInt: true,
                       isDuplicate: isDuplicate,
-                      onSave: (v) => ref
-                          .read(projectProvider.notifier)
-                          .setFeederSlot(record.id, int.tryParse(v)),
+                      onSave: (v) async {
+                        final slot = int.tryParse(v);
+                        final project = ref.read(projectProvider);
+                        if (project == null) return;
+                        final conflicts = project.records
+                            .where(
+                              (r) =>
+                                  r.id != record.id &&
+                                  r.feederSlot == slot &&
+                                  slot != null &&
+                                  r.assignmentKey != record.assignmentKey &&
+                                  !(project.confirmedSlotGroups[slot]?.contains(
+                                            r.assignmentKey,
+                                          ) ==
+                                          true &&
+                                      project.confirmedSlotGroups[slot]
+                                              ?.contains(
+                                                record.assignmentKey,
+                                              ) ==
+                                          true),
+                            )
+                            .toList();
+                        if (conflicts.isNotEmpty) {
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: Text('Share feeder slot $slot?'),
+                              content: SingleChildScrollView(
+                                child: Text(
+                                  'Assign ${record.designator} (${record.value}, ${record.footprint}) to slot $slot?\n\n'
+                                  'This slot already contains:\n'
+                                  '${conflicts.map((r) => '${r.designator}: ${r.value}, ${r.footprint}').join('\n')}\n\n'
+                                  'These components were classified differently. Check that they are the same physical part before pressing OK.',
+                                ),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: const Text('Cancel'),
+                                ),
+                                FilledButton(
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  child: const Text('OK'),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (confirmed != true || !context.mounted) return;
+                        }
+                        ref
+                            .read(projectProvider.notifier)
+                            .setFeederSlot(
+                              record.id,
+                              slot,
+                              confirmShared: conflicts.isNotEmpty,
+                            );
+                      },
                     ),
             ),
             // Speed
@@ -937,7 +991,7 @@ class _ComponentRow extends ConsumerWidget {
 class _InlineField extends StatefulWidget {
   final String value, hint;
   final bool isInt, isDuplicate;
-  final ValueChanged<String> onSave;
+  final Future<void> Function(String) onSave;
   const _InlineField({
     required this.value,
     required this.hint,
@@ -953,6 +1007,7 @@ class _InlineFieldState extends State<_InlineField> {
   late final TextEditingController _ctrl;
   late final FocusNode _focus;
   bool _editing = false;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -981,9 +1036,20 @@ class _InlineFieldState extends State<_InlineField> {
     super.dispose();
   }
 
-  void _commit() {
+  Future<void> _commit() async {
+    if (_saving || !_editing) return;
     _editing = false;
-    widget.onSave(_ctrl.text.trim());
+    setState(() => _saving = true);
+    try {
+      await widget.onSave(_ctrl.text.trim());
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && !_editing) _ctrl.text = widget.value;
+        });
+      }
+    }
   }
 
   @override
@@ -993,6 +1059,7 @@ class _InlineFieldState extends State<_InlineField> {
       padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
       child: TextField(
         controller: _ctrl,
+        enabled: !_saving,
         focusNode: _focus,
         keyboardType: TextInputType.number,
         inputFormatters: [

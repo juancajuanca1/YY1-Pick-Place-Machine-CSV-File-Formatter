@@ -112,18 +112,34 @@ class ProjectNotifier extends StateNotifier<PlacementProject?> {
   ///     is propagated to them automatically (first-time fill).
   ///   - Once a record already has a slot, later edits stay local to the
   ///     record being edited so each side/component can be changed later.
-  void setFeederSlot(String id, int? slot) {
+  void setFeederSlot(String id, int? slot, {bool confirmShared = false}) {
     final p = state;
     if (p == null) return;
     final target = p.records.where((r) => r.id == id).firstOrNull;
     if (target == null) return;
     final assignmentKey = target.assignmentKey;
+    if (confirmShared && slot != null) {
+      state = p.copyWith(
+        confirmedSlotGroups: {
+          ...p.confirmedSlotGroups,
+          slot: {
+            ...?p.confirmedSlotGroups[slot],
+            assignmentKey,
+            ...p.records
+                .where((r) => r.feederSlot == slot)
+                .map((r) => r.assignmentKey),
+          },
+        },
+      );
+    }
     _update((r) {
       if (r.id == id) {
         // Always update the record that was directly edited
         return r.copyWith(feederSlot: slot, clearFeederSlot: slot == null);
       }
-      if (r.assignmentKey == assignmentKey && r.feederSlot == null && slot != null) {
+      if (r.assignmentKey == assignmentKey &&
+          r.feederSlot == null &&
+          slot != null) {
         // Propagate only to matching unassigned records across both sides.
         return r.copyWith(feederSlot: slot);
       }
